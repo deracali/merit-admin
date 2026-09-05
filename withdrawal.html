@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Withdrawal Management & Settlement</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --bg-body: #f4f6f9;
+      --bg-card: #ffffff;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #10b981;
+      --success-bg: #d1fae5;
+      --success-text: #065f46;
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+      --danger: #dc2626;
+      --danger-bg: #fee2e2;
+      --danger-text: #991b1b;
+      --radius: 10px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    /* Filter Controls Bar */
+    .filters-bar {
+      background: var(--bg-card);
+      padding: 16px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+      margin-bottom: 20px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .filter-group select, .filter-group input {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+    }
+
+    .btn-refresh {
+      margin-left: auto;
+      background: #fff;
+      border: 1px solid var(--border-color);
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-refresh:hover {
+      background: #f9fafb;
+    }
+
+    /* Alert Box */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .alert-success { background-color: var(--success-bg); color: var(--success-text); border: 1px solid #a7f3d0; }
+    .alert-danger { background-color: var(--danger-bg); color: var(--danger-text); border: 1px solid #fca5a5; }
+
+    /* Table Component */
+    .table-container {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #f9fafb;
+      padding: 12px 16px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    tr:hover {
+      background-color: #f9fafb;
+    }
+
+    /* Status Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    .badge-pending { background-color: var(--warning-bg); color: var(--warning-text); }
+    .badge-completed { background-color: var(--success-bg); color: var(--success-text); }
+    .badge-failed { background-color: var(--danger-bg); color: var(--danger-text); }
+
+    /* User Profile Pill */
+    .user-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-name { font-weight: 600; color: var(--text-main); }
+    .user-email { font-size: 12px; color: var(--text-muted); }
+
+    /* Action Buttons */
+    .btn-action {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-action:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-disabled {
+      background: #e5e7eb;
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    /* Modal Component */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 1000;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: #fff;
+      width: 90%;
+      max-width: 550px;
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .detail-card {
+      background: #f9fafb;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .detail-row:last-child { margin-bottom: 0; }
+    .detail-label { color: var(--text-muted); }
+    .detail-value { font-weight: 600; text-align: right; }
+
+    .payout-details-box {
+      background: #fff;
+      border: 1px dashed var(--border-color);
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-approve {
+      flex: 1;
+      background: var(--success);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-approve:hover { background: #059669; }
+
+    .btn-reject {
+      flex: 1;
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-reject:hover { background: #b91c1c; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h1>Withdrawal Requests</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">Review, verify, and finalize user payouts</p>
+      </div>
+    </div>
+
+    <!-- Alert Box -->
+    <div id="alert-box" class="alert"></div>
+
+    <!-- Filter Controls -->
+    <div class="filters-bar">
+      <div class="filter-group">
+        <label for="filter-status">Status:</label>
+        <select id="filter-status" onchange="fetchWithdrawals()">
+          <option value="">All Statuses</option>
+          <option value="pending" selected>Pending</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed / Rejected</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="filter-currency">Currency:</label>
+        <input type="text" id="filter-currency" placeholder="e.g. USD, BTC" style="width: 120px;" onkeyup="if(event.key === 'Enter') fetchWithdrawals()">
+      </div>
+
+      <button class="btn-refresh" onclick="fetchWithdrawals()">
+        <i class="fa-solid fa-rotate"></i> Refresh
+      </button>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-container">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>User</th>
+              <th>Amount & Currency</th>
+              <th>Payout Method</th>
+              <th>Status</th>
+              <th>Requested Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="withdrawal-table-body">
+            <!-- Dynamic Data -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Finalize Action Modal -->
+  <div class="modal-overlay" id="finalize-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Finalize Withdrawal Settlement</h3>
+        <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="detail-card">
+        <div class="detail-row">
+          <span class="detail-label">Request ID:</span>
+          <span class="detail-value" id="modal-req-id">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">User Email:</span>
+          <span class="detail-value" id="modal-user-email">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Withdrawal Amount:</span>
+          <span class="detail-value" id="modal-amount" style="color: var(--primary); font-size: 16px;">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Payout Method:</span>
+          <span class="detail-value" id="modal-method">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Eligible Release Time:</span>
+          <span class="detail-value" id="modal-release-time">-</span>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <span class="detail-label">Payout Destination Details:</span>
+          <div class="payout-details-box" id="modal-payout-details">N/A</div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-reject" id="btn-reject-action" onclick="executeFinalize('failed')">
+          <i class="fa-solid fa-xmark"></i> Reject & Refund
+        </button>
+        <button class="btn-approve" id="btn-approve-action" onclick="executeFinalize('completed')">
+          <i class="fa-solid fa-check"></i> Approve & Disburse
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:4000/api/withdrawals';
+    let withdrawalList = [];
+    let selectedWithdrawal = null;
+
+    window.addEventListener('DOMContentLoaded', fetchWithdrawals);
+
+    function showAlert(message, type = 'success') {
+      const box = document.getElementById('alert-box');
+      box.className = `alert alert-${type}`;
+      box.innerText = message;
+      box.style.display = 'block';
+      setTimeout(() => { box.style.display = 'none'; }, 5000);
+    }
+
+    // Fetch All Withdrawals: GET /api/withdrawals
+    async function fetchWithdrawals() {
+      const status = document.getElementById('filter-status').value;
+      const currency = document.getElementById('filter-currency').value.trim();
+
+      let url = `${API_BASE_URL}?`;
+      if (status) url += `status=${status}&`;
+      if (currency) url += `currency=${currency}&`;
+
+      try {
+        const response = await fetch(url);
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          withdrawalList = result.data || [];
+          renderTable(withdrawalList);
+        } else {
+          showAlert(result.message || 'Failed to load withdrawal requests.', 'danger');
+        }
+      } catch (err) {
+        console.error('Error fetching withdrawals:', err);
+        showAlert('Network error connecting to server.', 'danger');
+      }
+    }
+
+    // Render Table Body
+    function renderTable(data) {
+      const tbody = document.getElementById('withdrawal-table-body');
+      tbody.innerHTML = '';
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No withdrawal records found.</td></tr>`;
+        return;
+      }
+
+      data.forEach(item => {
+        const row = document.createElement('tr');
+        const user = item.userId || {};
+        const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A';
+        const isPending = item.status === 'pending';
+
+        row.innerHTML = `
+          <td><code style="font-size: 12px; color: var(--text-muted);">${item._id.slice(-8)}</code></td>
+          <td>
+            <div class="user-info">
+              <span class="user-name">${user.name || 'Unknown User'}</span>
+              <span class="user-email">${user.email || 'N/A'}</span>
+            </div>
+          </td>
+          <td><strong>${item.amount} ${item.currency}</strong></td>
+          <td>${item.payoutMethod || 'Standard'}</td>
+          <td>
+            <span class="badge badge-${item.status}">
+              ${item.status}
+            </span>
+          </td>
+          <td>${createdDate}</td>
+          <td>
+            ${isPending ?
+              `<button class="btn-action" onclick="openActionModal('${item._id}')"><i class="fa-solid fa-sliders"></i> Process</button>` :
+              `<button class="btn-action btn-disabled" disabled><i class="fa-solid fa-lock"></i> Settled</button>`
+            }
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Open Settlement Modal
+    function openActionModal(id) {
+      selectedWithdrawal = withdrawalList.find(w => w._id === id);
+      if (!selectedWithdrawal) return;
+
+      const user = selectedWithdrawal.userId || {};
+      const releaseTime = selectedWithdrawal.eligibleReleaseAt
+        ? new Date(selectedWithdrawal.eligibleReleaseAt).toLocaleString()
+        : 'Immediate';
+
+      document.getElementById('modal-req-id').innerText = selectedWithdrawal._id;
+      document.getElementById('modal-user-email').innerText = user.email || 'N/A';
+      document.getElementById('modal-amount').innerText = `${selectedWithdrawal.amount} ${selectedWithdrawal.currency}`;
+      document.getElementById('modal-method').innerText = selectedWithdrawal.payoutMethod || 'Standard';
+      document.getElementById('modal-release-time').innerText = releaseTime;
+
+      // Payout Details formatting
+      const details = selectedWithdrawal.payoutDetails;
+      document.getElementById('modal-payout-details').innerText =
+        typeof details === 'object' ? JSON.stringify(details, null, 2) : (details || 'No structural details provided.');
+
+      document.getElementById('finalize-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('finalize-modal').classList.remove('active');
+      selectedWithdrawal = null;
+    }
+
+    // Execute Finalization: PUT /api/withdrawals/:id/finalize
+    async function executeFinalize(targetStatus) {
+      if (!selectedWithdrawal) return;
+
+      const actionText = targetStatus === 'completed' ? 'APPROVE and DISBURSE' : 'REJECT and REFUND';
+      if (!confirm(`Are you sure you want to ${actionText} this withdrawal request?`)) return;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/${selectedWithdrawal._id}/finalize`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: targetStatus })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          showAlert(`Withdrawal request marked as ${targetStatus}!`, 'success');
+          closeModal();
+          fetchWithdrawals();
+        } else {
+          showAlert(result.message || 'Failed to finalize withdrawal.', 'danger');
+        }
+      } catch (err) {
+        console.error('Error finalizing withdrawal:', err);
+        showAlert('Network error occurred while finalizing transaction.', 'danger');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account Address Management</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --bg-body: #f4f6f9;
+      --bg-card: #ffffff;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --success-bg: #d1fae5;
+      --success-text: #065f46;
+      --info-bg: #e0f2fe;
+      --info-text: #075985;
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+      --radius: 10px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background-color 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    /* Alert / Notification Toast */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .alert-success {
+      background-color: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid #a7f3d0;
+    }
+
+    .alert-danger {
+      background-color: #fee2e2;
+      color: var(--danger);
+      border: 1px solid #fca5a5;
+    }
+
+    /* Table Container */
+    .table-container {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #f9fafb;
+      padding: 12px 16px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    tr:hover {
+      background-color: #f9fafb;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-crypto { background: var(--info-bg); color: var(--info-text); }
+    .badge-bank { background: var(--success-bg); color: var(--success-text); }
+    .badge-paypal { background: var(--warning-bg); color: var(--warning-text); }
+
+    /* Action Buttons */
+    .action-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .btn-sm:hover {
+      background: #f3f4f6;
+    }
+
+    .btn-danger-sm {
+      color: var(--danger);
+      border-color: #fca5a5;
+    }
+
+    .btn-danger-sm:hover {
+      background: #fee2e2;
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 1000;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: #fff;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      border-radius: var(--radius);
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    /* Form Grid */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group.full-width {
+      grid-column: span 2;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .form-group input,
+    .form-group select {
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--primary);
+    }
+
+    .dynamic-section {
+      display: none;
+    }
+
+    .dynamic-section.active {
+      display: contents;
+    }
+
+    .modal-footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .btn-secondary {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h1>Account Addresses</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">Manage payment channels, wallet receiving addresses, and bank accounts</p>
+      </div>
+      <button class="btn-primary" onclick="openCreateModal()">
+        <i class="fa-solid fa-plus"></i> Add New Address
+      </button>
+    </div>
+
+    <!-- Alert Box -->
+    <div id="alert-box" class="alert"></div>
+
+    <!-- Table -->
+    <div class="table-container">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Asset / Currency</th>
+              <th>Destination Details</th>
+              <th>Created Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="address-table-body">
+            <!-- Dynamic Data Rendered Here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <div class="modal-overlay" id="address-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Add Account Address</h3>
+        <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="address-form" onsubmit="handleFormSubmit(event)">
+        <input type="hidden" id="edit-id" value="">
+
+        <div class="form-grid">
+          <!-- Type Field -->
+          <div class="form-group">
+            <label for="type">Account Type *</label>
+            <select id="type" required onchange="handleTypeChange()">
+              <option value="CRYPTO">CRYPTO</option>
+              <option value="BANK">BANK</option>
+              <option value="PAYPAL">PAYPAL</option>
+            </select>
+          </div>
+
+          <!-- Asset Field -->
+          <div class="form-group">
+            <label for="asset">Asset Symbol *</label>
+            <input type="text" id="asset" placeholder="e.g. BTC, USDT, USD, NGN" required style="text-transform: uppercase;">
+          </div>
+
+          <!-- CRYPTO FIELDS -->
+          <div id="crypto-fields" class="dynamic-section active">
+            <div class="form-group">
+              <label for="network">Network *</label>
+              <input type="text" id="network" placeholder="e.g. TRC20, ERC20, BEP20" style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+              <label for="memo">Memo / Tag (Optional)</label>
+              <input type="text" id="memo" placeholder="Optional Destination Tag">
+            </div>
+            <div class="form-group full-width">
+              <label for="cryptoAddress">Crypto Address *</label>
+              <input type="text" id="cryptoAddress" placeholder="Enter wallet address">
+            </div>
+          </div>
+
+          <!-- BANK FIELDS -->
+          <div id="bank-fields" class="dynamic-section">
+            <div class="form-group">
+              <label for="bankName">Bank Name *</label>
+              <input type="text" id="bankName" placeholder="e.g. Chase Bank, GTBank">
+            </div>
+            <div class="form-group">
+              <label for="accountName">Account Name *</label>
+              <input type="text" id="accountName" placeholder="Account holder name">
+            </div>
+            <div class="form-group">
+              <label for="accountNumber">Account Number *</label>
+              <input type="text" id="accountNumber" placeholder="Enter account number">
+            </div>
+            <div class="form-group">
+              <label for="routingNumber">Routing Number (Optional)</label>
+              <input type="text" id="routingNumber" placeholder="Routing or Sort Code">
+            </div>
+          </div>
+
+          <!-- PAYPAL FIELDS -->
+          <div id="paypal-fields" class="dynamic-section">
+            <div class="form-group full-width">
+              <label for="paypalEmail">PayPal Email Address *</label>
+              <input type="email" id="paypalEmail" placeholder="e.g. payments@company.com">
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn-primary" id="save-btn">Save Address</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:4000/api/accounts'; // Updated to map base path
+    let addressList = [];
+
+    // Initialize Page
+    window.addEventListener('DOMContentLoaded', fetchAddresses);
+
+    // Alert Notification System
+    function showAlert(message, type = 'success') {
+      const box = document.getElementById('alert-box');
+      box.className = `alert alert-${type}`;
+      box.innerText = message;
+      box.style.display = 'block';
+      setTimeout(() => { box.style.display = 'none'; }, 4000);
+    }
+
+    // Fetch All Addresses from Base Collection Endpoint: GET /api/addresses/address
+    async function fetchAddresses() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/address`);
+        const result = await response.json();
+
+        if (response.ok && (result.success || Array.isArray(result))) {
+          addressList = result.data || result;
+          renderTable(addressList);
+        } else {
+          showAlert(result.message || 'Failed to retrieve addresses.', 'danger');
+        }
+      } catch (err) {
+        console.error('Error fetching addresses:', err);
+        showAlert('Could not connect to localhost server.', 'danger');
+      }
+    }
+
+    // Render Table
+    function renderTable(data) {
+      const tbody = document.getElementById('address-table-body');
+      tbody.innerHTML = '';
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No account addresses found.</td></tr>`;
+        return;
+      }
+
+      data.forEach(item => {
+        const row = document.createElement('tr');
+        const badgeClass = `badge-${item.type.toLowerCase()}`;
+        const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A';
+
+        row.innerHTML = `
+          <td><span class="badge ${badgeClass}">${item.type}</span></td>
+          <td style="font-weight: 700;">${item.asset}</td>
+          <td>${formatDestinationDetails(item)}</td>
+          <td>${createdDate}</td>
+          <td>
+            <div class="action-btns">
+              <button class="btn-sm" onclick="openEditModal('${item._id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+              <button class="btn-sm btn-danger-sm" onclick="deleteAddress('${item._id}')"><i class="fa-solid fa-trash"></i> Delete</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Format Details Column according to Account Schema Type
+    function formatDestinationDetails(item) {
+      if (item.type === 'CRYPTO') {
+        return `
+          <div><strong>Address:</strong> ${item.cryptoAddress || 'N/A'}</div>
+          <div style="font-size:12px; color: var(--text-muted);">
+            Network: <strong>${item.network || 'N/A'}</strong> ${item.memo ? `| Memo: ${item.memo}` : ''}
+          </div>
+        `;
+      }
+      if (item.type === 'BANK') {
+        return `
+          <div><strong>${item.bankName || 'Bank'}</strong> - ${item.accountNumber || 'N/A'}</div>
+          <div style="font-size:12px; color: var(--text-muted);">
+            Name: ${item.accountName || 'N/A'} ${item.routingNumber ? `| Routing: ${item.routingNumber}` : ''}
+          </div>
+        `;
+      }
+      if (item.type === 'PAYPAL') {
+        return `<div><strong>Email:</strong> ${item.paypalEmail || 'N/A'}</div>`;
+      }
+      return 'N/A';
+    }
+
+    // Form Field Switcher for CRYPTO, BANK, and PAYPAL
+    function handleTypeChange() {
+      const type = document.getElementById('type').value;
+
+      document.getElementById('crypto-fields').classList.remove('active');
+      document.getElementById('bank-fields').classList.remove('active');
+      document.getElementById('paypal-fields').classList.remove('active');
+
+      if (type === 'CRYPTO') {
+        document.getElementById('crypto-fields').classList.add('active');
+      } else if (type === 'BANK') {
+        document.getElementById('bank-fields').classList.add('active');
+      } else if (type === 'PAYPAL') {
+        document.getElementById('paypal-fields').classList.add('active');
+      }
+    }
+
+    // Modal Control
+    function openCreateModal() {
+      document.getElementById('address-form').reset();
+      document.getElementById('edit-id').value = '';
+      document.getElementById('modal-title').innerText = 'Add Account Address';
+      handleTypeChange();
+      document.getElementById('address-modal').classList.add('active');
+    }
+
+    function openEditModal(id) {
+      const item = addressList.find(a => a._id === id);
+      if (!item) return;
+
+      document.getElementById('edit-id').value = item._id;
+      document.getElementById('modal-title').innerText = 'Edit Account Address';
+      document.getElementById('type').value = item.type;
+      document.getElementById('asset').value = item.asset;
+
+      // Reset dynamic inputs
+      document.getElementById('network').value = item.network || '';
+      document.getElementById('cryptoAddress').value = item.cryptoAddress || '';
+      document.getElementById('memo').value = item.memo || '';
+      document.getElementById('bankName').value = item.bankName || '';
+      document.getElementById('accountName').value = item.accountName || '';
+      document.getElementById('accountNumber').value = item.accountNumber || '';
+      document.getElementById('routingNumber').value = item.routingNumber || '';
+      document.getElementById('paypalEmail').value = item.paypalEmail || '';
+
+      handleTypeChange();
+      document.getElementById('address-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('address-modal').classList.remove('active');
+    }
+
+    // Handle Form Submission (POST for new, PUT for updates)
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+
+      const editId = document.getElementById('edit-id').value;
+      const type = document.getElementById('type').value;
+      const asset = document.getElementById('asset').value.toUpperCase().trim();
+
+      // Base Payload
+      const payload = { type, asset };
+
+      // Type-specific field extraction
+      if (type === 'CRYPTO') {
+        payload.network = document.getElementById('network').value.toUpperCase().trim();
+        payload.cryptoAddress = document.getElementById('cryptoAddress').value.trim();
+        payload.memo = document.getElementById('memo').value.trim() || null;
+      } else if (type === 'BANK') {
+        payload.bankName = document.getElementById('bankName').value.trim();
+        payload.accountName = document.getElementById('accountName').value.trim();
+        payload.accountNumber = document.getElementById('accountNumber').value.trim();
+        payload.routingNumber = document.getElementById('routingNumber').value.trim() || undefined;
+      } else if (type === 'PAYPAL') {
+        payload.paypalEmail = document.getElementById('paypalEmail').value.trim().toLowerCase();
+      }
+
+      // Endpoint Selection Matching Router Structure
+      const isEdit = Boolean(editId);
+      const url = isEdit ? `${API_BASE_URL}/${editId}` : `${API_BASE_URL}/address`;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      try {
+        const response = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          showAlert(`Address successfully ${isEdit ? 'updated' : 'created'}!`, 'success');
+          closeModal();
+          fetchAddresses();
+        } else {
+          showAlert(result.message || 'Operation failed.', 'danger');
+        }
+      } catch (err) {
+        console.error('Error submitting form:', err);
+        showAlert('Network error while saving address.', 'danger');
+      }
+    }
+
+    // Delete Address: DELETE /api/addresses/:id
+    async function deleteAddress(id) {
+      if (!confirm('Are you sure you want to delete this address?')) return;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/${id}`, {
+          method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          showAlert('Address deleted successfully.', 'success');
+          fetchAddresses();
+        } else {
+          showAlert(result.message || 'Could not delete address.', 'danger');
+        }
+      } catch (err) {
+        console.error('Error deleting address:', err);
+        showAlert('Network error occurred.', 'danger');
+      }
+    }
+  </script>
+</body>
+</html>

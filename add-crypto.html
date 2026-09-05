@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cryptocurrency Catalog Management</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --bg-body: #f4f6f9;
+      --bg-card: #ffffff;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --success-bg: #d1fae5;
+      --success-text: #065f46;
+      --radius: 10px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background-color 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    /* Alert / Notification Toast */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .alert-success {
+      background-color: var(--success-bg);
+      color: var(--success-text);
+      border: 1px solid #a7f3d0;
+    }
+
+    .alert-danger {
+      background-color: #fee2e2;
+      color: var(--danger);
+      border: 1px solid #fca5a5;
+    }
+
+    /* Table Container */
+    .table-container {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #f9fafb;
+      padding: 12px 16px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    tr:hover {
+      background-color: #f9fafb;
+    }
+
+    /* Asset Info Block */
+    .asset-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .asset-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #f3f4f6;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    /* Badges & Status */
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-active {
+      background-color: var(--success-bg);
+      color: var(--success-text);
+    }
+
+    .badge-inactive {
+      background-color: #f3f4f6;
+      color: #6b7280;
+    }
+
+    /* Rates Grid in Table */
+    .rates-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px 12px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+
+    .rate-item span {
+      color: var(--text-muted);
+    }
+
+    /* Action Buttons */
+    .action-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .btn-sm:hover {
+      background: #f3f4f6;
+    }
+
+    .btn-danger-sm {
+      color: var(--danger);
+      border-color: #fca5a5;
+    }
+
+    .btn-danger-sm:hover {
+      background: #fee2e2;
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 1000;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: #fff;
+      width: 90%;
+      max-width: 650px;
+      max-height: 90vh;
+      border-radius: var(--radius);
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    /* Form Layout */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group.full-width {
+      grid-column: span 2;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .form-group input {
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .form-group input:focus {
+      border-color: var(--primary);
+    }
+
+    .rates-section-title {
+      grid-column: span 2;
+      font-size: 14px;
+      font-weight: 700;
+      color: #111827;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border-color);
+    }
+
+    /* Checkbox / Toggle */
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .checkbox-group input {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .modal-footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .btn-secondary {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h1>Crypto Assets</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">Manage supported cryptocurrencies and multi-currency exchange rates</p>
+      </div>
+      <button class="btn-primary" onclick="openCreateModal()">
+        <i class="fa-solid fa-plus"></i> Add Crypto Asset
+      </button>
+    </div>
+
+    <!-- Alert Box -->
+    <div id="alert-box" class="alert"></div>
+
+    <!-- Table -->
+    <div class="table-container">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Asset</th>
+              <th>Symbol</th>
+              <th>Valuation Rates</th>
+              <th>Status</th>
+              <th>Created Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="crypto-table-body">
+            <!-- Dynamic Data Rendered Here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <div class="modal-overlay" id="crypto-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Add Cryptocurrency Asset</h3>
+        <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="crypto-form" onsubmit="handleFormSubmit(event)">
+        <input type="hidden" id="edit-id" value="">
+
+        <div class="form-grid">
+          <!-- Name -->
+          <div class="form-group">
+            <label for="name">Crypto Name *</label>
+            <input type="text" id="name" placeholder="e.g. Bitcoin" required>
+          </div>
+
+          <!-- Symbol -->
+          <div class="form-group">
+            <label for="symbol">Symbol *</label>
+            <input type="text" id="symbol" placeholder="e.g. BTC" required style="text-transform: uppercase;">
+          </div>
+
+          <!-- Image Icon URL -->
+          <div class="form-group full-width">
+            <label for="imageIcon">Icon URL (Optional)</label>
+            <input type="url" id="imageIcon" placeholder="https://example.com/icons/btc.png">
+          </div>
+
+          <!-- Active Toggle -->
+          <div class="form-group full-width">
+            <label class="checkbox-group">
+              <input type="checkbox" id="isActive" checked>
+              <span>Asset is Active (Available for trading/transactions)</span>
+            </label>
+          </div>
+
+          <!-- Multi-Currency Valuation Rates -->
+          <div class="rates-section-title"><i class="fa-solid fa-globe"></i> Valuation Rates</div>
+
+          <div class="form-group">
+            <label for="rate-usd">USD Rate ($) *</label>
+            <input type="number" step="any" id="rate-usd" placeholder="0.00" required>
+          </div>
+
+          <div class="form-group">
+            <label for="rate-eur">EUR Rate (€) *</label>
+            <input type="number" step="any" id="rate-eur" placeholder="0.00" required>
+          </div>
+
+          <div class="form-group">
+            <label for="rate-gbp">GBP Rate (£) *</label>
+            <input type="number" step="any" id="rate-gbp" placeholder="0.00" required>
+          </div>
+
+          <div class="form-group">
+            <label for="rate-cad">CAD Rate (C$)</label>
+            <input type="number" step="any" id="rate-cad" placeholder="0.00">
+          </div>
+
+          <div class="form-group">
+            <label for="rate-aud">AUD Rate (A$)</label>
+            <input type="number" step="any" id="rate-aud" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn-primary" id="save-btn">Save Asset</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:4000/api/crypto';
+    let cryptoList = [];
+
+    // Initialize Page
+    window.addEventListener('DOMContentLoaded', fetchCryptoAssets);
+
+    // Alert Notification System
+    function showAlert(message, type = 'success') {
+      const box = document.getElementById('alert-box');
+      box.className = `alert alert-${type}`;
+      box.innerText = message;
+      box.style.display = 'block';
+      setTimeout(() => { box.style.display = 'none'; }, 4000);
+    }
+
+    // Fetch All Cryptos: GET /api/crypto
+    async function fetchCryptoAssets() {
+      try {
+        const response = await fetch(API_BASE_URL);
+        const result = await response.json();
+
+        if (response.ok && (result.success || Array.isArray(result))) {
+          cryptoList = result.data || result;
+          renderTable(cryptoList);
+        } else {
+          showAlert(result.message || 'Failed to retrieve cryptocurrency list.', 'danger');
+        }
+      } catch (err) {
+        console.error('Error fetching crypto assets:', err);
+        showAlert('Could not connect to server.', 'danger');
+      }
+    }
+
+    // Render Table Body
+    function renderTable(data) {
+      const tbody = document.getElementById('crypto-table-body');
+      tbody.innerHTML = '';
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No cryptocurrency assets found.</td></tr>`;
+        return;
+      }
+
+      data.forEach(item => {
+        const row = document.createElement('tr');
+        const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A';
+        const rates = item.rates || {};
+
+        // Icon Fallback Rendering
+        const iconHtml = item.imageIcon
+          ? `<img src="${item.imageIcon}" class="asset-icon" alt="${item.symbol}" onerror="this.onerror=null; this.src=''; this.className='asset-icon'; this.innerText='${item.symbol.slice(0, 2)}';">`
+          : `<div class="asset-icon">${item.symbol.slice(0, 2)}</div>`;
+
+        row.innerHTML = `
+          <td>
+            <div class="asset-cell">
+              ${iconHtml}
+              <span style="font-weight: 600;">${item.name}</span>
+            </div>
+          </td>
+          <td><strong style="color: var(--primary);">${item.symbol}</strong></td>
+          <td>
+            <div class="rates-list">
+              <div class="rate-item"><span>USD:</span> $${rates.usd ?? 0}</div>
+              <div class="rate-item"><span>EUR:</span> €${rates.eur ?? 0}</div>
+              <div class="rate-item"><span>GBP:</span> £${rates.gbp ?? 0}</div>
+              <div class="rate-item"><span>CAD:</span> C$${rates.cad ?? 0}</div>
+              <div class="rate-item"><span>AUD:</span> A$${rates.aud ?? 0}</div>
+            </div>
+          </td>
+          <td>
+            <span class="badge-status ${item.isActive ? 'badge-active' : 'badge-inactive'}">
+              <i class="fa-solid fa-circle" style="font-size: 8px;"></i>
+              ${item.isActive ? 'Active' : 'Inactive'}
+            </span>
+          </td>
+          <td>${createdDate}</td>
+          <td>
+            <div class="action-btns">
+              <button class="btn-sm" onclick="openEditModal('${item._id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+              <button class="btn-sm btn-danger-sm" onclick="deleteCryptoAsset('${item._id}')"><i class="fa-solid fa-trash"></i> Delete</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Modal Control
+    function openCreateModal() {
+      document.getElementById('crypto-form').reset();
+      document.getElementById('edit-id').value = '';
+      document.getElementById('modal-title').innerText = 'Add Cryptocurrency Asset';
+      document.getElementById('isActive').checked = true;
+      document.getElementById('crypto-modal').classList.add('active');
+    }
+
+    function openEditModal(id) {
+      const item = cryptoList.find(c => c._id === id);
+      if (!item) return;
+
+      document.getElementById('edit-id').value = item._id;
+      document.getElementById('modal-title').innerText = 'Edit Cryptocurrency Asset';
+      document.getElementById('name').value = item.name || '';
+      document.getElementById('symbol').value = item.symbol || '';
+      document.getElementById('imageIcon').value = item.imageIcon || '';
+      document.getElementById('isActive').checked = Boolean(item.isActive);
+
+      // Populate Rates
+      const rates = item.rates || {};
+      document.getElementById('rate-usd').value = rates.usd ?? 0;
+      document.getElementById('rate-eur').value = rates.eur ?? 0;
+      document.getElementById('rate-gbp').value = rates.gbp ?? 0;
+      document.getElementById('rate-cad').value = rates.cad ?? 0;
+      document.getElementById('rate-aud').value = rates.aud ?? 0;
+
+      document.getElementById('crypto-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('crypto-modal').classList.remove('active');
+    }
+
+    // Form Submission (POST /api/crypto or PUT /api/crypto/:cryptoId)
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+
+      const editId = document.getElementById('edit-id').value;
+      const name = document.getElementById('name').value.trim();
+      const symbol = document.getElementById('symbol').value.toUpperCase().trim();
+      const imageIcon = document.getElementById('imageIcon').value.trim() || undefined;
+      const isActive = document.getElementById('isActive').checked;
+
+      const rates = {
+        usd: parseFloat(document.getElementById('rate-usd').value) || 0,
+        eur: parseFloat(document.getElementById('rate-eur').value) || 0,
+        gbp: parseFloat(document.getElementById('rate-gbp').value) || 0,
+        cad: parseFloat(document.getElementById('rate-cad').value) || 0,
+        aud: parseFloat(document.getElementById('rate-aud').value) || 0
+      };
+
+      const payload = { name, symbol, rates, isActive, imageIcon };
+
+      const isEdit = Boolean(editId);
+      const url = isEdit ? `${API_BASE_URL}/${editId}` : API_BASE_URL;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      try {
+        const response = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          showAlert(`Crypto asset successfully ${isEdit ? 'updated' : 'added'}!`, 'success');
+          closeModal();
+          fetchCryptoAssets();
+        } else {
+          showAlert(result.message || 'Operation failed.', 'danger');
+        }
+      } catch (err) {
+        console.error('Error submitting form:', err);
+        showAlert('Network error while saving asset.', 'danger');
+      }
+    }
+
+    // Delete Crypto Asset: DELETE /api/crypto/:cryptoId
+    async function deleteCryptoAsset(id) {
+      if (!confirm('Are you sure you want to delete this cryptocurrency asset?')) return;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/${id}`, {
+          method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          showAlert('Crypto asset deleted successfully.', 'success');
+          fetchCryptoAssets();
+        } else {
+          showAlert(result.message || 'Could not delete crypto asset.', 'danger');
+        }
+      } catch (err) {
+        console.error('Error deleting crypto asset:', err);
+        showAlert('Network error occurred.', 'danger');
+      }
+    }
+  </script>
+</body>
+</html>

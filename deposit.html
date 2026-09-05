@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Pending Transactions Management</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .card {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .badge-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .badge-credit {
+            background-color: #e6f4ea;
+            color: #137333;
+        }
+        .badge-debit {
+            background-color: #fce8e6;
+            color: #c5221f;
+        }
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background-color: #0d6efd;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="py-4">
+
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1"><i class="fa-solid fa-clock-rotate-left me-2 text-warning"></i>Pending Transactions</h3>
+            <p class="text-muted mb-0">Review and update status for all pending user deposits and withdrawals.</p>
+        </div>
+        <button id="refreshBtn" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-rotate me-1"></i> Refresh Data
+        </button>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <!-- Main Card -->
+    <div class="card p-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>User</th>
+                        <th>Type</th>
+                        <th>Amount & Currency</th>
+                        <th>Description</th>
+                        <th>Reference</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="pendingTransactionsBody">
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2 text-muted">Loading pending transactions...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 & JavaScript Logic -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const API_BASE_URL = 'http://localhost:4000/api';
+    const pendingTransactionsBody = document.getElementById('pendingTransactionsBody');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const alertContainer = document.getElementById('alertContainer');
+    const loadMoreBtn = document.getElementById('loadMoreBtn'); // Ensure you have this button in your HTML
+
+    // Pagination State
+    let allPendingTransactions = [];
+    let currentPage = 1;
+    const PAGE_SIZE = 10; // Adjust batch limit per load here
+
+    document.addEventListener('DOMContentLoaded', fetchPendingTransactions);
+    refreshBtn.addEventListener('click', fetchPendingTransactions);
+    
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', loadMoreTransactions);
+    }
+
+    function showAlert(message, type = 'success') {
+        alertContainer.innerHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        setTimeout(() => alertContainer.innerHTML = '', 5000);
+    }
+
+    async function fetchPendingTransactions() {
+        try {
+            // Reset pagination state on fresh fetch
+            currentPage = 1;
+            allPendingTransactions = [];
+            if (loadMoreBtn) loadMoreBtn.classList.add('d-none');
+
+            pendingTransactionsBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-muted">Loading pending transactions...</p>
+                    </td>
+                </tr>
+            `;
+
+            const response = await fetch(`${API_BASE_URL}/users`);
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Failed to load user list');
+            }
+
+            const users = result.data || [];
+            let pendingList = [];
+
+            // Flatten user balance history and filter ONLY 'pending' transactions
+            users.forEach(user => {
+                const userFullName = user.kyc?.firstName && user.kyc?.lastName
+                    ? `${user.kyc.firstName} ${user.kyc.lastName}`
+                    : 'Unverified User';
+
+                if (Array.isArray(user.balanceHistory)) {
+                    user.balanceHistory.forEach(tx => {
+                        const status = (tx.status || 'pending').toLowerCase();
+                        if (status === 'pending') {
+                            pendingList.push({
+                                ...tx,
+                                userId: user._id,
+                                userEmail: user.email,
+                                userName: userFullName
+                            });
+                        }
+                    });
+                }
+            });
+
+            // Sort pending items by latest date first
+            pendingList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            allPendingTransactions = pendingList;
+
+            // Render first page
+            renderInitialTable();
+
+        } catch (error) {
+            console.error('Fetch Error:', error);
+            pendingTransactionsBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-danger">
+                        <i class="fa-solid fa-triangle-exclamation fa-2x mb-2"></i><br>
+                        ${error.message}
+                    </td>
+                </tr>
+            `;
+            if (loadMoreBtn) loadMoreBtn.classList.add('d-none');
+        }
+    }
+
+    function renderInitialTable() {
+        if (allPendingTransactions.length === 0) {
+            pendingTransactionsBody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i class="fa-regular fa-circle-check fa-3x mb-3 text-success"></i>
+                        <h5>No Pending Transactions</h5>
+                        <p class="mb-0">All user transaction requests have been processed.</p>
+                    </td>
+                </tr>
+            `;
+            if (loadMoreBtn) loadMoreBtn.classList.add('d-none');
+            return;
+        }
+
+        pendingTransactionsBody.innerHTML = '';
+        appendTransactionsToTable(0, PAGE_SIZE);
+        toggleLoadMoreButton();
+    }
+
+    function loadMoreTransactions() {
+        const start = currentPage * PAGE_SIZE;
+        const end = start + PAGE_SIZE;
+        appendTransactionsToTable(start, end);
+        currentPage++;
+        toggleLoadMoreButton();
+    }
+
+    function appendTransactionsToTable(start, end) {
+        const pageItems = allPendingTransactions.slice(start, end);
+
+        const rowsHtml = pageItems.map(tx => {
+            const isCredit = ['credit', 'deposit', 'topup', 'fund'].includes((tx.type || '').toLowerCase());
+            const typeBadge = isCredit ? 'badge-credit' : 'badge-debit';
+            const userInitial = tx.userName !== 'Unverified User' ? tx.userName.charAt(0) : tx.userEmail.charAt(0).toUpperCase();
+
+            return `
+                <tr id="row-${tx._id}">
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-2">${userInitial}</div>
+                            <div>
+                                <div class="fw-bold">${tx.userName}</div>
+                                <div class="text-muted small">${tx.userEmail}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge ${typeBadge} text-capitalize px-2 py-1">
+                            ${tx.type}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="fw-bold">${tx.amount}</span> 
+                        <span class="badge bg-light text-dark border">${tx.currency}</span>
+                    </td>
+                    <td><small class="text-muted">${tx.description || 'N/A'}</small></td>
+                    <td><code>${tx.reference || 'N/A'}</code></td>
+                    <td><small>${new Date(tx.createdAt).toLocaleString()}</small></td>
+                    <td>
+                        <span class="badge badge-pending px-2 py-1 text-uppercase">
+                            <i class="fa-solid fa-hourglass-half me-1"></i>${tx.status}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button 
+                                class="btn btn-success" 
+                                onclick="updateTransactionStatus('${tx.userId}', '${tx._id}', 'completed')"
+                                id="btn-approve-${tx._id}">
+                                <i class="fa-solid fa-check me-1"></i> Complete
+                            </button>
+                            <button 
+                                class="btn btn-danger" 
+                                onclick="updateTransactionStatus('${tx.userId}', '${tx._id}', 'failed')"
+                                id="btn-reject-${tx._id}">
+                                <i class="fa-solid fa-xmark me-1"></i> Fail
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        pendingTransactionsBody.insertAdjacentHTML('beforeend', rowsHtml);
+    }
+
+    function toggleLoadMoreButton() {
+        if (!loadMoreBtn) return;
+        
+        const currentlyDisplayed = currentPage * PAGE_SIZE;
+        if (currentlyDisplayed < allPendingTransactions.length) {
+            loadMoreBtn.classList.remove('d-none');
+        } else {
+            loadMoreBtn.classList.add('d-none');
+        }
+    }
+
+    async function updateTransactionStatus(userId, transactionId, newStatus) {
+        const approveBtn = document.getElementById(`btn-approve-${transactionId}`);
+        const rejectBtn = document.getElementById(`btn-reject-${transactionId}`);
+
+        if (!confirm(`Are you sure you want to mark this transaction as ${newStatus.toUpperCase()}?`)) {
+            return;
+        }
+
+        try {
+            if (approveBtn) approveBtn.disabled = true;
+            if (rejectBtn) rejectBtn.disabled = true;
+
+            const response = await fetch(`${API_BASE_URL}/users/${userId}/transactions/${transactionId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                showAlert(`Transaction updated to <strong>${newStatus}</strong> successfully!`, 'success');
+                
+                // Remove from local memory tracking
+                allPendingTransactions = allPendingTransactions.filter(tx => tx._id !== transactionId);
+
+                const row = document.getElementById(`row-${transactionId}`);
+                if (row) {
+                    row.remove();
+                }
+
+                if (pendingTransactionsBody.children.length === 0) {
+                    fetchPendingTransactions();
+                }
+            } else {
+                showAlert(result.message || 'Failed to update transaction status.', 'danger');
+                if (approveBtn) approveBtn.disabled = false;
+                if (rejectBtn) rejectBtn.disabled = false;
+            }
+
+        } catch (error) {
+            console.error('Update Error:', error);
+            showAlert('A network error occurred while updating status.', 'danger');
+            if (approveBtn) approveBtn.disabled = false;
+            if (rejectBtn) rejectBtn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
